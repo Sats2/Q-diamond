@@ -1,2 +1,5 @@
 # Q-diamond
-Visualizing quantum algorithms
+
+Visualizing quantum algorithms with q-diamond plots
+
+### JK 2025
