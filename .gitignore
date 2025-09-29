@@ -154,6 +154,12 @@ venv.bak/
 # mkdocs documentation
 /site
 
+# Data & reports
+data/
+reports/*.html
+reports/figures/*.png
+!reports/.gitkeep
+
 # mypy
 .mypy_cache/
 .dmypy.json
