@@ -1,3 +1,3 @@
-from .viz_diamond import *
+from .viz import *
 from .utils import *
 __all__ = []  
