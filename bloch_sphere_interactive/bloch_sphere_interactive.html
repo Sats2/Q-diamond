@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Bloch Sphere</title>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+
+    <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}});
+    </script>
+    <script type="text/javascript"
+        src="//cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+    </script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        
+        #plot-container {
+            width: 100%;
+            height: 600px;
+            margin-bottom: 30px;
+        }
+        
+        .controls-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 20px;
+        }
+        
+        .control-group {
+            padding: 20px;
+            background-color: #f9f9f9;
+            border-radius: 8px;
+        }
+        
+        .control-group h3 {
+            margin-top: 0;
+            color: #555;
+        }
+        
+        .slider-container {
+            margin-bottom: 20px;
+        }
+        
+        .slider-container label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #666;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            height: 8px;
+            border-radius: 5px;
+            background: #ddd;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #4CAF50;
+            cursor: pointer;
+        }
+        
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #4CAF50;
+            cursor: pointer;
+            border: none;
+        }
+        
+        .value-display {
+            display: inline-block;
+            min-width: 60px;
+            text-align: right;
+            font-family: monospace;
+            color: #333;
+            font-weight: bold;
+        }
+        
+        #state-info {
+            padding: 20px;
+            background-color: #e8f5e9;
+            border-radius: 8px;
+            border-left: 4px solid #4CAF50;
+        }
+        
+        #state-info h3 {
+            margin-top: 0;
+            color: #2e7d32;
+        }
+        
+        #state-info p {
+            margin: 10px 0;
+            line-height: 1.6;
+        }
+        
+        #state-info strong {
+            color: #1b5e20;
+        }
+        
+        .preset-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .preset-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background-color: #2196F3;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+        
+        .preset-btn:hover {
+            background-color: #1976D2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Interactive Bloch Sphere Visualization</h1>
+        
+        <div id="plot-container"></div>
+        
+        <div class="controls-container">
+            <div class="control-group">
+                <h3>α₀ (Ground State Amplitude)</h3>
+                <div class="slider-container">
+                    <label>
+                        Re(α₀): <span class="value-display" id="a0re-value">1.000</span>
+                    </label>
+                    <input type="range" id="a0re-slider" min="-1" max="1" step="0.01" value="1">
+                </div>
+                <div class="slider-container">
+                    <label>
+                        Im(α₀): <span class="value-display" id="a0im-value">0.000</span>
+                    </label>
+                    <input type="range" id="a0im-slider" min="-1" max="1" step="0.01" value="0">
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <h3>α₁ (Excited State Amplitude)</h3>
+                <div class="slider-container">
+                    <label>
+                        Re(α₁): <span class="value-display" id="a1re-value">0.000</span>
+                    </label>
+                    <input type="range" id="a1re-slider" min="-1" max="1" step="0.01" value="0">
+                </div>
+                <div class="slider-container">
+                    <label>
+                        Im(α₁): <span class="value-display" id="a1im-value">0.000</span>
+                    </label>
+                    <input type="range" id="a1im-slider" min="-1" max="1" step="0.01" value="0">
+                </div>
+            </div>
+        </div>
+        
+        <div class="preset-buttons">
+            <button class="preset-btn" onclick="setPreset(1, 0, 0, 0)">|0⟩ State</button>
+            <button class="preset-btn" onclick="setPreset(0, 0, 1, 0)">|1⟩ State</button>
+            <button class="preset-btn" onclick="setPreset(0.707, 0, 0.707, 0)">|+⟩ State</button>
+            <button class="preset-btn" onclick="setPreset(0.707, 0, -0.707, 0)">|−⟩ State</button>
+            <button class="preset-btn" onclick="setPreset(0.707, 0, 0, 0.707)">|+i⟩ State</button>
+            <button class="preset-btn" onclick="setPreset(0.707, 0, 0, -0.707)">|−i⟩ State</button>
+        </div>
+        
+        <div id="state-info"></div>
+    </div>
+
+    <script>
+        // Convert complex amplitudes to Bloch sphere coordinates
+        function C2toBloch(re0, im0, re1, im1) {
+            const eps = 1e-12;
+            let alpha0 = { re: re0, im: im0 };
+            let alpha1 = { re: re1, im: im1 };
+            
+            // Normalize
+            const a0mod = alpha0.re**2 + alpha0.im**2;
+            const a1mod = alpha1.re**2 + alpha1.im**2;
+            const n2 = a0mod + a1mod;
+            
+            if (n2 < eps) {
+                return { theta: 0, phi: 0, x: 0, y: 0, z: 1 };
+            }
+            
+            const norm = Math.sqrt(n2);
+            alpha0.re /= norm;
+            alpha0.im /= norm;
+            alpha1.re /= norm;
+            alpha1.im /= norm;
+            
+            // Bloch components: x = 2 Re(α0 α1*), y = 2 Im(α0 α1*), z = |α0|^2 - |α1|^2
+            const ab_conj_re = alpha0.re * alpha1.re + alpha0.im * alpha1.im;
+            const ab_conj_im = alpha0.im * alpha1.re - alpha0.re * alpha1.im;
+            
+            const x = 2.0 * ab_conj_re;
+            const y = 2.0 * ab_conj_im;
+            const z = (alpha0.re**2 + alpha0.im**2) - (alpha1.re**2 + alpha1.im**2);
+            
+            // Spherical coordinates
+            const z_clamped = Math.max(-1, Math.min(1, z));
+            const theta = Math.acos(z_clamped);
+            const phi = Math.atan2(y, x);
+            
+            return { theta, phi, x, y, z };
+        }
+        
+        // Create Bloch sphere with axes (optimized with lower resolution for faster rendering)
+        function createBlochSphere() {
+            const traces = [];
+            
+            // Create sphere surface (reduced from 50 to 30 points for faster rendering)
+            const u = [];
+            const v = [];
+            for (let i = 0; i <= 30; i++) {
+                u.push(i * 2 * Math.PI / 30);
+                v.push(i * Math.PI / 30);
+            }
+            
+            const x_sphere = [];
+            const y_sphere = [];
+            const z_sphere = [];
+            
+            for (let i = 0; i < u.length; i++) {
+                const row_x = [];
+                const row_y = [];
+                const row_z = [];
+                for (let j = 0; j < v.length; j++) {
+                    row_x.push(Math.cos(u[i]) * Math.sin(v[j]));
+                    row_y.push(Math.sin(u[i]) * Math.sin(v[j]));
+                    row_z.push(Math.cos(v[j]));
+                }
+                x_sphere.push(row_x);
+                y_sphere.push(row_y);
+                z_sphere.push(row_z);
+            }
+            
+            traces.push({
+                type: 'surface',
+                x: x_sphere,
+                y: y_sphere,
+                z: z_sphere,
+                colorscale: [[0, 'lightblue'], [1, 'lightblue']],
+                opacity: 0.15,
+                showscale: false,
+                hoverinfo: 'skip'
+            });
+            
+            // Axes
+            const axisRange = 1.0;
+            
+            // X-axis (red)
+            traces.push({
+                type: 'scatter3d',
+                mode: 'lines',
+                x: [-axisRange, axisRange],
+                y: [0, 0],
+                z: [0, 0],
+                line: { color: 'red', width: 4 },
+                name: 'X',
+                hoverinfo: 'skip'
+            });
+            
+            // Y-axis (green)
+            traces.push({
+                type: 'scatter3d',
+                mode: 'lines',
+                x: [0, 0],
+                y: [-axisRange, axisRange],
+                z: [0, 0],
+                line: { color: 'green', width: 4 },
+                name: 'Y',
+                hoverinfo: 'skip'
+            });
+            
+            // Z-axis (blue)
+            traces.push({
+                type: 'scatter3d',
+                mode: 'lines',
+                x: [0, 0],
+                y: [0, 0],
+                z: [-axisRange, axisRange],
+                line: { color: 'blue', width: 4 },
+                name: 'Z',
+                hoverinfo: 'skip'
+            });
+            
+            // Equatorial circle (reduced resolution)
+            const theta = [];
+            for (let i = 0; i <= 60; i++) {
+                theta.push(i * 2 * Math.PI / 60);
+            }
+            
+            traces.push({
+                type: 'scatter3d',
+                mode: 'lines',
+                x: theta.map(t => Math.cos(t)),
+                y: theta.map(t => Math.sin(t)),
+                z: theta.map(t => 0),
+                line: { color: 'gray', width: 2, dash: 'dash' },
+                name: 'Equator',
+                hoverinfo: 'skip'
+            });
+            
+            // Add state labels at key positions
+            // |0⟩ at north pole (0, 0, 1)
+            traces.push({
+                type: 'scatter3d',
+                mode: 'text',
+                x: [0],
+                y: [0],
+                z: [0.95],
+                text: ['|0⟩'],
+                textfont: { size: 18, color: 'blue', family: 'Arial' },
+                hoverinfo: '|ψ⟩ = 1|0⟩ + 0|1⟩',
+                showlegend: false
+            });
+            
+            // |1⟩ at south pole (0, 0, -1)
+            traces.push({
+                type: 'scatter3d',
+                mode: 'text',
+                x: [0],
+                y: [0],
+                z: [-1.15],
+                text: ['|1⟩'],
+                textfont: { size: 18, color: 'blue', family: 'Arial' },
+                hoverinfo: '|ψ⟩ = 0|0⟩ + 1|1⟩',
+                showlegend: false
+            });
+            
+            // |+⟩ at (1, 0, 0)
+            traces.push({
+                type: 'scatter3d',
+                mode: 'text',
+                x: [1.05],
+                y: [0],
+                z: [0],
+                text: ['|+⟩'],
+                textfont: { size: 18, color: 'red', family: 'Arial' },
+                hoverinfo: '|ψ⟩ = 0.707|0⟩ + 0.707|1⟩',
+                showlegend: false
+            });
+            
+            // |−⟩ at (-1, 0, 0)
+            traces.push({
+                type: 'scatter3d',
+                mode: 'text',
+                x: [-1.05],
+                y: [0],
+                z: [0],
+                text: ['|−⟩'],
+                textfont: { size: 18, color: 'red', family: 'Arial' },
+                hoverinfo: '|ψ⟩ = 0.707|0⟩ - 0.707|1⟩',
+                showlegend: false
+            });
+            
+            // |+i⟩ at (0, 1, 0)
+            traces.push({
+                type: 'scatter3d',
+                mode: 'text',
+                x: [0],
+                y: [1.05],
+                z: [0],
+                text: ['|+i⟩'],
+                textfont: { size: 18, color: 'green', family: 'Arial' },
+                hoverinfo: '|ψ⟩ = 0.707i|0⟩ + 0.707i|1⟩',
+                showlegend: false
+            });
+            
+            // |−i⟩ at (0, -1, 0)
+            traces.push({
+                type: 'scatter3d',
+                mode: 'text',
+                x: [0],
+                y: [-1.05],
+                z: [0],
+                text: ['|-i⟩'],
+                textfont: { size: 18, color: 'green', family: 'Arial' },
+                hoverinfo: '|ψ⟩ = 0.707i|0⟩ - 0.707i|1⟩',
+                showlegend: false
+            });
+            
+            return traces;
+        }
+        
+        // Create complex plane visualization (optimized)
+        function createComplexPlane(a0re, a0im, a1re, a1im) {
+            const traces = [];
+            
+            // Unit circle (reduced resolution for faster rendering)
+            const theta = [];
+            for (let i = 0; i <= 60; i++) {
+                theta.push(i * 2 * Math.PI / 60);
+            }
+            
+            traces.push({
+                type: 'scatter',
+                mode: 'lines',
+                x: theta.map(t => Math.cos(t)),
+                y: theta.map(t => Math.sin(t)),
+                line: { color: 'black', width: 2 },
+                name: 'Unit Circle',
+                hoverinfo: 'skip',
+                xaxis: 'x2',
+                yaxis: 'y2'
+            });
+            
+            // Admissibility circles
+            const r0 = Math.sqrt(a0re**2 + a0im**2);
+            const r1 = Math.sqrt(a1re**2 + a1im**2);
+            
+            traces.push({
+                type: 'scatter',
+                mode: 'lines',
+                x: theta.map(t => r0 * Math.cos(t)),
+                y: theta.map(t => r0 * Math.sin(t)),
+                line: { color: 'crimson', width: 1 },
+                opacity: 0.3,
+                name: '|α₀| circle',
+                hoverinfo: 'skip',
+                xaxis: 'x2',
+                yaxis: 'y2'
+            });
+            
+            traces.push({
+                type: 'scatter',
+                mode: 'lines',
+                x: theta.map(t => r1 * Math.cos(t)),
+                y: theta.map(t => r1 * Math.sin(t)),
+                line: { color: 'green', width: 1 },
+                opacity: 0.3,
+                name: '|α₁| circle',
+                hoverinfo: 'skip',
+                xaxis: 'x2',
+                yaxis: 'y2'
+            });
+            
+            // Amplitude vectors
+            traces.push({
+                type: 'scatter',
+                mode: 'lines+markers',
+                x: [0, a0re],
+                y: [0, a0im],
+                line: { color: 'crimson', width: 3 },
+                marker: { 
+                    size: [0, 12], 
+                    color: 'crimson' },
+                name: 'α₀',
+                hovertemplate: `α₀: ${a0re.toFixed(3)} + ${a0im.toFixed(3)}i<extra></extra>`,
+                xaxis: 'x2',
+                yaxis: 'y2'
+            });
+            
+            traces.push({
+                type: 'scatter',
+                mode: 'lines+markers',
+                x: [0, a1re],
+                y: [0, a1im],
+                line: { color: 'green', width: 3 },
+                marker: { 
+                    size: [0, 12], 
+                    color: 'green' },
+                name: 'α₁',
+                hovertemplate: `α₁: ${a1re.toFixed(3)} + ${a1im.toFixed(3)}i<extra></extra>`,
+                xaxis: 'x2',
+                yaxis: 'y2'
+            });
+            
+            return traces;
+        }
+        
+        // Create Bloch point
+        function createBlochPoint(re0, im0, re1, im1) {
+            const { theta, phi, x, y, z } = C2toBloch(re0, im0, re1, im1);
+            const traces = [];
+            
+            // State vector arrow
+            traces.push({
+                type: 'scatter3d',
+                mode: 'lines+markers',
+                x: [0, x],
+                y: [0, y],
+                z: [0, z],
+                line: { color: 'black', width: 6 },
+                marker: { 
+                    size: [0, 12],
+                    color: 'red' 
+                },
+                name: '|ψ⟩',
+                hovertemplate: `θ=${(theta * 180 / Math.PI).toFixed(1)}°, φ=${(phi * 180 / Math.PI).toFixed(1)}°<br>` +
+                              `x=${x.toFixed(3)}, y=${y.toFixed(3)}, z=${z.toFixed(3)}<extra></extra>`
+            });
+            
+            // Latitude circle (optimized with reduced resolution)
+            if (Math.abs(Math.sin(theta)) > 0.01) {
+                const t = [];
+                for (let i = 0; i <= 50; i++) {
+                    t.push(i * 2 * Math.PI / 50);
+                }
+                
+                traces.push({
+                    type: 'scatter3d',
+                    mode: 'lines',
+                    x: t.map(ti => Math.sin(theta) * Math.cos(ti)),
+                    y: t.map(ti => Math.sin(theta) * Math.sin(ti)),
+                    z: t.map(ti => z),
+                    line: { color: 'orange', width: 5},
+                    name: 'Latitude',
+                    hoverinfo: 'skip'
+                });
+            }
+            
+            return traces;
+        }
+        
+        // Initialize plot once
+        let isInitialized = false;
+        
+        // Track which slider was last changed
+        let lastChangedSlider = 'a0';
+        
+        // Cache static traces that don't change
+        let staticTraces = null;
+        
+        // Debounce timer for state info updates (to reduce DOM updates)
+        let stateInfoTimer = null;
+        
+        // Update plot (optimized with Plotly.react for fast updates)
+        function updatePlot(changedSlider = null) {
+            if (changedSlider) {
+                lastChangedSlider = changedSlider;
+            }
+            
+            let a0re = parseFloat(document.getElementById('a0re-slider').value);
+            let a0im = parseFloat(document.getElementById('a0im-slider').value);
+            let a1re = parseFloat(document.getElementById('a1re-slider').value);
+            let a1im = parseFloat(document.getElementById('a1im-slider').value);
+            
+            // Enforce normalization based on which slider was changed
+            let r0_sq = a0re**2 + a0im**2;
+            let r1_sq = a1re**2 + a1im**2;
+            
+            if (lastChangedSlider === 'a0') {
+                // User changed α₀, so normalize α₁
+                if (r0_sq > 1) {
+                    const norm = Math.sqrt(r0_sq);
+                    a0re /= norm;
+                    a0im /= norm;
+                    r0_sq = 1.0;
+                }
+                
+                // Calculate maximum allowed magnitude for α₁
+                const r1_max = Math.sqrt(Math.max(0, 1 - r0_sq));
+                
+                // Keep the angle of α₁ but adjust magnitude
+                let gamma1 = 0;
+                if (a1re !== 0 || a1im !== 0) {
+                    gamma1 = Math.atan2(a1im, a1re);
+                }
+                
+                a1re = r1_max * Math.cos(gamma1);
+                a1im = r1_max * Math.sin(gamma1);
+                r1_sq = a1re**2 + a1im**2;
+            } else {
+                // User changed α₁, so normalize α₀
+                if (r1_sq > 1) {
+                    const norm = Math.sqrt(r1_sq);
+                    a1re /= norm;
+                    a1im /= norm;
+                    r1_sq = 1.0;
+                }
+                
+                // Calculate maximum allowed magnitude for α₀
+                const r0_max = Math.sqrt(Math.max(0, 1 - r1_sq));
+                
+                // Keep the angle of α₀ but adjust magnitude
+                let gamma0 = 0;
+                if (a0re !== 0 || a0im !== 0) {
+                    gamma0 = Math.atan2(a0im, a0re);
+                }
+                
+                a0re = r0_max * Math.cos(gamma0);
+                a0im = r0_max * Math.sin(gamma0);
+                r0_sq = a0re**2 + a0im**2;
+            }
+            
+            // Update value displays (faster than toFixed for simple display)
+            document.getElementById('a0re-value').textContent = a0re.toFixed(3);
+            document.getElementById('a0im-value').textContent = a0im.toFixed(3);
+            document.getElementById('a1re-value').textContent = a1re.toFixed(3);
+            document.getElementById('a1im-value').textContent = a1im.toFixed(3);
+            
+            // Update sliders to normalized values
+            document.getElementById('a0re-slider').value = a0re;
+            document.getElementById('a0im-slider').value = a0im;
+            document.getElementById('a1re-slider').value = a1re;
+            document.getElementById('a1im-slider').value = a1im;
+            
+            // Create static traces only once (sphere, axes, labels)
+            if (!staticTraces) {
+                staticTraces = createBlochSphere();
+            }
+            
+            // Create dynamic traces (only what changes with slider movement)
+            const traces = [
+                ...staticTraces,
+                ...createBlochPoint(a0re, a0im, a1re, a1im),
+                ...createComplexPlane(a0re, a0im, a1re, a1im)
+            ];
+            
+            const layout = {
+                showlegend: false,
+                grid: {
+                    rows: 1,
+                    columns: 2,
+                    pattern: 'independent'
+                },
+                scene: {
+                    xaxis: { range: [-1.3, 1.3], title: 'X' },
+                    yaxis: { range: [-1.3, 1.3], title: 'Y' },
+                    zaxis: { range: [-1.3, 1.3], title: 'Z' },
+                    aspectmode: 'cube',
+                    camera: {
+                        eye: { x: 1.5, y: 1.5, z: 1.5 }
+                    },
+                    domain: { x: [0, 0.48], y: [0, 1] }
+                },
+                xaxis2: {
+                    range: [-1.2, 1.2],
+                    title: 'Re',
+                    scaleanchor: 'y2',
+                    scaleratio: 1,
+                    domain: [0.52, 1]
+                },
+                yaxis2: {
+                    range: [-1.2, 1.2],
+                    title: 'Im',
+                    domain: [0, 1]
+                },
+                margin: { l: 0, r: 0, t: 30, b: 0 },
+                annotations: [
+                    {
+                        text: 'Bloch Sphere',
+                        xref: 'paper',
+                        yref: 'paper',
+                        x: 0.24,
+                        y: 1,
+                        xanchor: 'center',
+                        yanchor: 'bottom',
+                        showarrow: false,
+                        font: { size: 16, color: '#333' }
+                    },
+                    {
+                        text: 'Complex Plane',
+                        xref: 'paper',
+                        yref: 'paper',
+                        x: 0.76,
+                        y: 1,
+                        xanchor: 'center',
+                        yanchor: 'bottom',
+                        showarrow: false,
+                        font: { size: 16, color: '#333' }
+                    }
+                ]
+            };
+            
+            // Use Plotly.react for fast updates (only redraws changed data)
+            if (!isInitialized) {
+                Plotly.newPlot('plot-container', traces, layout, { 
+                    responsive: true,
+                    displayModeBar: false  // Hide toolbar for cleaner UI
+                });
+                isInitialized = true;
+            } else {
+                // Use Plotly.react with minimal redraws
+                Plotly.react('plot-container', traces, layout);
+            }
+            
+            // Debounce state info updates to reduce DOM manipulation
+            clearTimeout(stateInfoTimer);
+            stateInfoTimer = setTimeout(() => {
+                updateStateInfo(a0re, a0im, a1re, a1im, r0_sq, r1_sq);
+            }, 50);  // Update state info only after 50ms of no slider movement
+        }
+        
+        // Separate function for updating state info (reduces main update function complexity)
+        function updateStateInfo(a0re, a0im, a1re, a1im, r0_sq, r1_sq) {
+            // Update state info
+            const { theta, phi, x, y, z } = C2toBloch(a0re, a0im, a1re, a1im);
+            
+            document.getElementById('state-info').innerHTML = `
+                <h3>Quantum State Information</h3>
+                <p><strong>Amplitudes:</strong> 
+                   α₀ = ${a0re.toFixed(3)} + ${a0im.toFixed(3)}i (|α₀|² = ${r0_sq.toFixed(3)}), 
+                   α₁ = ${a1re.toFixed(3)} + ${a1im.toFixed(3)}i (|α₁|² = ${r1_sq.toFixed(3)})</p>
+                <p><strong>Normalization Constraint Satisfaction:</strong>
+                    |α₀|² + |α₁|² = ${(r0_sq + r1_sq).toFixed(3)}</p>
+                <p><strong>Bloch Vector:</strong> 
+                   x = ${x.toFixed(3)}, y = ${y.toFixed(3)}, z = ${z.toFixed(3)}</p>
+                <p><strong>Spherical Coordinates:</strong> 
+                   θ = ${(theta * 180 / Math.PI).toFixed(1)}°, φ = ${(phi * 180 / Math.PI).toFixed(1)}°</p>
+                <p><strong>State:</strong> 
+                   |ψ⟩ = (${a0re.toFixed(3)} + ${a0im.toFixed(3)}i)|0⟩ + (${a1re.toFixed(3)} + ${a1im.toFixed(3)}i)|1⟩</p>
+            `;
+        }
+        
+        // Set preset state
+        function setPreset(a0re, a0im, a1re, a1im) {
+            document.getElementById('a0re-slider').value = a0re;
+            document.getElementById('a0im-slider').value = a0im;
+            document.getElementById('a1re-slider').value = a1re;
+            document.getElementById('a1im-slider').value = a1im;
+            updatePlot();
+        }
+        
+        // Add event listeners
+        document.getElementById('a0re-slider').addEventListener('input', () => updatePlot('a0'));
+        document.getElementById('a0im-slider').addEventListener('input', () => updatePlot('a0'));
+        document.getElementById('a1re-slider').addEventListener('input', () => updatePlot('a1'));
+        document.getElementById('a1im-slider').addEventListener('input', () => updatePlot('a1'));
+        
+        // Initial plot
+        updatePlot();
+    </script>
+</body>
+</html>
